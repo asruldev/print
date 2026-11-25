@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Print RPP02N</title>
 <style>
-:root{--bg:#f5f5f4;--card:#fff;--tx:#1c1917;--mut:#78716c;--bd:#d6d3d1;--ac:#2563eb;--ok:#16a34a;--er:#dc2626;--qris:#e11d48}
-@media(prefers-color-scheme:dark){:root{--bg:#1c1917;--card:#292524;--tx:#fafaf9;--mut:#a8a29e;--bd:#44403c;--ac:#60a5fa;--ok:#4ade80;--er:#f87171;--qris:#fb7185}}
+:root{--bg:#f5f5f4;--card:#fff;--tx:#1c1917;--mut:#78716c;--bd:#d6d3d1;--ac:#2563eb;--ok:#16a34a;--er:#dc2626}
+@media(prefers-color-scheme:dark){:root{--bg:#1c1917;--card:#292524;--tx:#fafaf9;--mut:#a8a29e;--bd:#44403c;--ac:#60a5fa;--ok:#4ade80;--er:#f87171}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,sans-serif;padding:16px}
 .w{max-width:560px;margin:0 auto;display:grid;gap:14px}
@@ -26,11 +26,18 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .tabs{display:flex;gap:6px;margin-bottom:12px}
 .tabs button{flex:1;font-size:13px;padding:9px 8px}
 .hid{display:none}
-#qprev{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px;background:var(--bg);border-radius:8px;margin-top:10px}
-#qprev canvas,#qprev img{max-width:220px;width:100%;image-rendering:pixelated;background:#fff;padding:8px;border-radius:6px}
-.meta{font-size:12px;color:var(--mut);text-align:center;line-height:1.4}
-.meta strong{color:var(--tx);display:block;font-size:13px}
+.check{display:flex;align-items:center;gap:8px;margin:12px 0 4px;font-size:13px;color:var(--tx)}
+.check input{width:auto;accent-color:var(--ac)}
+#qbox{margin-top:4px;padding-top:4px;border-top:1px dashed var(--bd)}
+#qprev{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;background:var(--bg);border-radius:8px;margin-top:8px}
+#qprev canvas{max-width:160px;width:100%;image-rendering:pixelated;background:#fff;padding:6px;border-radius:6px}
+.meta{font-size:11px;color:var(--mut);text-align:center;line-height:1.35}
+.meta strong{color:var(--tx);display:block;font-size:12px}
 .hint{font-size:11px;color:var(--mut);margin-top:6px}
+#pvwrap{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+#pvq{display:none;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border-top:1px dashed var(--bd)}
+#pvq.on{display:flex}
+#pvq canvas{width:140px;background:#fff;padding:4px;border-radius:4px}
 </style>
 </head>
 <body>
@@ -49,16 +56,41 @@ button:disabled{opacity:.45;cursor:not-allowed}
     <div class="tabs">
       <button id="t1">Struk</button>
       <button id="t2" class="s">Teks Bebas</button>
-      <button id="t3" class="s">QRIS</button>
     </div>
 
     <div id="p1">
-      <label>Nama Toko</label><input id="shop" value="TOKO SAYA">
-      <label>Alamat / Keterangan</label><input id="addr" value="Sawangan, Depok">
+      <label>Nama Toko</label><input id="shop" value="PADUKA BY TABUSI - BEVERAGES">
+      <label>Alamat / Keterangan</label><input id="addr" value="Bekasi">
       <h2 style="margin-top:14px">Barang</h2>
       <div id="items"></div>
       <button class="s" id="add">+ Tambah barang</button>
       <label>Catatan kaki</label><input id="foot" value="Terima kasih!">
+
+      <label class="check"><input type="checkbox" id="qon" checked> Cetak QRIS di bawah struk</label>
+      <div id="qbox">
+        <label>NMID</label>
+        <input id="qn" value="ID1026604786164">
+        <label>Kode Terminal</label>
+        <input id="qt" value="A01">
+        <label>Payload QRIS (EMV)</label>
+        <textarea id="qp" rows="3">00020101021126600003001011516000102110266047861640303A0151440014ID.CO.QRIS.WWW0215ID10266047861640303A01520458125303360540105802ID5924PADUKA BY TABUSI - BEVERA6006BEKASI61051741162070703A0163045610</textarea>
+        <label>Ukuran QR di printer</label>
+        <select id="qs">
+          <option value="4">4 — kecil</option>
+          <option value="5">5</option>
+          <option value="6" selected>6 — sedang</option>
+          <option value="7">7</option>
+          <option value="8">8 — besar</option>
+        </select>
+        <p class="hint">QRIS muncul di bawah total/catatan kaki saat cetak struk.</p>
+        <div id="qprev">
+          <canvas id="qcan" width="160" height="160"></canvas>
+          <div class="meta">
+            <strong id="qlabel">PADUKA BY TABUSI - BEVERAGES</strong>
+            <span id="qmeta">NMID ID1026604786164 · A01</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div id="p2" class="hid">
@@ -68,50 +100,30 @@ Baris 2
 Baris 3</textarea>
     </div>
 
-    <div id="p3" class="hid">
-      <label>Nama Merchant</label>
-      <input id="qm" value="PADUKA BY TABUSI - BEVERAGES">
-      <label>NMID</label>
-      <input id="qn" value="ID1026604786164">
-      <label>Kode Terminal</label>
-      <input id="qt" value="A01">
-      <label>Payload QRIS (EMV)</label>
-      <textarea id="qp" rows="4">00020101021126600003001011516000102110266047861640303A0151440014ID.CO.QRIS.WWW0215ID10266047861640303A01520458125303360540105802ID5924PADUKA BY TABUSI - BEVERA6006BEKASI61051741162070703A0163045610</textarea>
-      <label>Ukuran QR di printer (1–16)</label>
-      <select id="qs">
-        <option value="4">4 — kecil</option>
-        <option value="5">5</option>
-        <option value="6" selected>6 — sedang</option>
-        <option value="7">7</option>
-        <option value="8">8 — besar</option>
-      </select>
-      <p class="hint">Payload diambil dari placard QRIS. Ubah jika ganti merchant. Cetak memakai perintah ESC/POS QR native.</p>
-      <div id="qprev">
-        <canvas id="qcan" width="200" height="200"></canvas>
-        <div class="meta">
-          <strong id="qlabel">PADUKA BY TABUSI - BEVERAGES</strong>
-          <span id="qmeta">NMID ID1026604786164 · A01</span>
-        </div>
-      </div>
-    </div>
-
     <div class="r" style="margin-top:14px">
       <button id="pr" disabled>Cetak</button>
       <button id="tst" class="s" disabled>Tes Cetak</button>
     </div>
   </div>
 
-  <div class="c"><h2 id="pvh">Pratinjau (32 karakter/baris)</h2>
-    <pre id="pv" style="margin:0;font-size:12px;overflow-x:auto"></pre></div>
+  <div class="c">
+    <h2 id="pvh">Pratinjau (32 karakter/baris)</h2>
+    <div id="pvwrap">
+      <pre id="pv" style="margin:0;font-size:12px;overflow-x:auto"></pre>
+      <div id="pvq">
+        <canvas id="pvcan" width="140" height="140"></canvas>
+        <span class="meta" style="font-size:11px">Scan QRIS untuk bayar</span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 <script>
-const W = 32; // karakter per baris, kertas 58mm
+const W = 32;
 let dev = null, chr = null, tabN = 1;
 const $ = id => document.getElementById(id);
 
-// UUID layanan umum printer thermal BLE
 const SERVICES = [
   '000018f0-0000-1000-8000-00805f9b34fb',
   0xff00, 0xffe0, 0xfee7,
@@ -123,20 +135,15 @@ function setSt(t, ok){ $('st').textContent = t; $('st').className = ok ? 'ok' : 
 function ready(on){ $('pr').disabled = $('tst').disabled = $('bd').disabled = !on; }
 
 async function connect(){
-  if(!navigator.bluetooth){ alert('Browser tidak mendukung Web Bluetooth. Pakai Chrome/Edge (Android atau desktop), buka file ini langsung dari HTTPS atau localhost / file lokal.'); return; }
+  if(!navigator.bluetooth){ alert('Browser tidak mendukung Web Bluetooth. Pakai Chrome/Edge (Android atau desktop), buka file ini dari HTTPS / localhost.'); return; }
   try{
     setSt('Mencari…', false);
-    dev = await navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
-      optionalServices: SERVICES
-    });
+    dev = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: SERVICES });
     dev.addEventListener('gattserverdisconnected', () => { chr = null; ready(false); setSt('Terputus', false); });
     setSt('Menghubungkan…', false);
     const srv = await dev.gatt.connect();
-    const list = await srv.getPrimaryServices();
-    for(const s of list){
-      const chs = await s.getCharacteristics();
-      const w = chs.find(c => c.properties.write || c.properties.writeWithoutResponse);
+    for(const s of await srv.getPrimaryServices()){
+      const w = (await s.getCharacteristics()).find(c => c.properties.write || c.properties.writeWithoutResponse);
       if(w){ chr = w; break; }
     }
     if(!chr) throw new Error('Karakteristik tulis tidak ditemukan');
@@ -153,132 +160,131 @@ const rp = n => Number(n||0).toLocaleString('id-ID');
 function lr(l, r){ l = clean(l); r = clean(r); const sp = W - l.length - r.length; return sp > 0 ? l + ' '.repeat(sp) + r : l.slice(0, W - r.length - 1) + ' ' + r; }
 function ctr(s){ s = clean(s); return s.length >= W ? s : ' '.repeat(Math.floor((W - s.length)/2)) + s; }
 
-function build(){
+function qrisOn(){ return tabN === 1 && $('qon').checked; }
+
+function buildStruk(){
   const lines = [];
-  if(tabN === 1){
-    lines.push(ctr($('shop').value), ctr($('addr').value), '-'.repeat(W));
-    let total = 0;
-    document.querySelectorAll('.item').forEach(r => {
-      const [n, q, p] = r.querySelectorAll('input');
-      const sub = (+q.value||0) * (+p.value||0); total += sub;
-      if(!n.value) return;
-      lines.push(clean(n.value).slice(0, W));
-      lines.push(lr('  ' + (q.value||0) + ' x ' + rp(p.value), rp(sub)));
-    });
-    lines.push('-'.repeat(W), lr('TOTAL', rp(total)), '-'.repeat(W), ctr($('foot').value));
-  } else if(tabN === 2){
-    clean($('free').value).split('\n').forEach(l => {
-      while(l.length > W){ lines.push(l.slice(0, W)); l = l.slice(W); }
-      lines.push(l);
-    });
-  }
+  lines.push(ctr($('shop').value), ctr($('addr').value), '-'.repeat(W));
+  let total = 0;
+  document.querySelectorAll('.item').forEach(r => {
+    const [n, q, p] = r.querySelectorAll('input');
+    const sub = (+q.value||0) * (+p.value||0); total += sub;
+    if(!n.value) return;
+    lines.push(clean(n.value).slice(0, W));
+    lines.push(lr('  ' + (q.value||0) + ' x ' + rp(p.value), rp(sub)));
+  });
+  lines.push('-'.repeat(W), lr('TOTAL', rp(total)), '-'.repeat(W), ctr($('foot').value));
   return lines;
 }
 
-function buildQrisLines(){
+function buildFree(){
+  const lines = [];
+  clean($('free').value).split('\n').forEach(l => {
+    while(l.length > W){ lines.push(l.slice(0, W)); l = l.slice(W); }
+    lines.push(l);
+  });
+  return lines;
+}
+
+function buildQrisFooter(){
   return [
-    ctr('QRIS'),
-    ctr('Pembayaran Nasional'),
     '-'.repeat(W),
-    ctr($('qm').value),
+    ctr('Bayar dengan QRIS'),
     ctr($('qn').value),
-    ctr('Terminal ' + $('qt').value),
-    // QR disisipkan via ESC/POS, bukan teks
-    '',
+    '', // placeholder QR
     ctr('SATU QRIS UNTUK SEMUA'),
-    ctr('www.aspi-qris.id'),
-    '-'.repeat(W)
+    ctr('www.aspi-qris.id')
   ];
 }
 
 function preview(){
-  if(tabN === 3){
-    $('pvh').textContent = 'Pratinjau QRIS';
-    $('pv').textContent = buildQrisLines().join('\n').replace('\n\n', '\n[ QR CODE ]\n');
-    $('qlabel').textContent = $('qm').value || '(tanpa nama)';
+  $('qbox').style.display = $('qon').checked ? '' : 'none';
+  if(tabN === 1){
+    const lines = buildStruk();
+    if(qrisOn()){
+      lines.push(...buildQrisFooter().map(l => l === '' ? '[ QRIS ]' : l));
+      $('pvq').classList.add('on');
+      drawQr($('pvcan'), 140);
+    } else {
+      $('pvq').classList.remove('on');
+    }
+    $('pv').textContent = lines.join('\n');
+    $('qlabel').textContent = $('shop').value || '(tanpa nama)';
     $('qmeta').textContent = 'NMID ' + ($('qn').value || '-') + ' · ' + ($('qt').value || '-');
-    drawQr();
+    drawQr($('qcan'), 160);
   } else {
-    $('pvh').textContent = 'Pratinjau (32 karakter/baris)';
-    $('pv').textContent = build().join('\n');
+    $('pvq').classList.remove('on');
+    $('pv').textContent = buildFree().join('\n');
   }
 }
 
-function drawQr(){
+function drawQr(canvas, size){
   const payload = $('qp').value.trim();
-  const canvas = $('qcan');
+  if(!canvas) return;
   if(!payload){
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle = '#999'; ctx.font = '12px sans-serif'; ctx.fillText('Payload kosong', 40, 100);
     return;
   }
   if(typeof QRCode === 'undefined') return;
   QRCode.toCanvas(canvas, payload, {
-    width: 200,
+    width: size,
     margin: 1,
     errorCorrectionLevel: 'M',
     color: { dark: '#000000', light: '#ffffff' }
   }, err => { if(err) console.error(err); });
 }
 
-function toBytes(lines){
-  const enc = new TextEncoder();
-  const out = [0x1B, 0x40]; // init
-  lines.forEach(l => { out.push(...enc.encode(l), 0x0A); });
-  out.push(0x1B, 0x64, 4); // feed 4 baris
-  return new Uint8Array(out);
-}
-
-/** ESC/POS native QR (GS ( k) — umum di printer thermal China / RPP02N */
 function escposQr(data, moduleSize){
-  const enc = new TextEncoder();
-  const d = enc.encode(data);
+  const d = new TextEncoder().encode(data);
   const size = Math.max(1, Math.min(16, moduleSize|0 || 6));
   const out = [];
-
-  // Model 2
   out.push(0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00);
-  // Module size
   out.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, size);
-  // Error correction M
   out.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31);
-  // Store data
   const storeLen = d.length + 3;
   out.push(0x1D, 0x28, 0x6B, storeLen & 0xff, (storeLen >> 8) & 0xff, 0x31, 0x50, 0x30, ...d);
-  // Print
   out.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30);
   return out;
 }
 
-function toQrisBytes(){
+function toBytes(lines){
   const enc = new TextEncoder();
-  const lines = buildQrisLines();
-  const payload = $('qp').value.trim();
-  const size = +$('qs').value || 6;
-  const out = [0x1B, 0x40]; // init
+  const out = [0x1B, 0x40];
+  lines.forEach(l => { out.push(...enc.encode(l), 0x0A); });
+  out.push(0x1B, 0x64, 4);
+  return new Uint8Array(out);
+}
 
-  // Align center for whole job
-  out.push(0x1B, 0x61, 0x01);
+function toStrukBytes(){
+  const enc = new TextEncoder();
+  const out = [0x1B, 0x40];
+  const pushLine = l => { out.push(...enc.encode(l), 0x0A); };
 
-  for(const l of lines){
-    if(l === ''){
-      // sisipkan QR di sini
-      if(payload) out.push(...escposQr(payload, size));
-      out.push(0x0A);
-      continue;
+  buildStruk().forEach(pushLine);
+
+  if(qrisOn()){
+    const payload = $('qp').value.trim();
+    const size = +$('qs').value || 6;
+    out.push(0x1B, 0x61, 0x01); // center
+    for(const l of buildQrisFooter()){
+      if(l === ''){
+        if(payload) out.push(...escposQr(payload, size));
+        out.push(0x0A);
+      } else {
+        pushLine(l);
+      }
     }
-    out.push(...enc.encode(l), 0x0A);
+    out.push(0x1B, 0x61, 0x00); // left
   }
 
-  out.push(0x1B, 0x61, 0x00); // align left
   out.push(0x1B, 0x64, 4);
   return new Uint8Array(out);
 }
 
 async function send(bytes){
   if(!chr) return;
-  const size = 100; // jika gagal, turunkan ke 20
+  const size = 100;
   for(let i = 0; i < bytes.length; i += size){
     const part = bytes.slice(i, i + size);
     if(chr.properties.writeWithoutResponse) await chr.writeValueWithoutResponse(part);
@@ -308,16 +314,17 @@ function addItem(n='', q=1, p=0){
 addItem('Kopi susu', 2, 18000); addItem('Roti bakar', 1, 15000);
 
 $('add').onclick = () => { addItem(); preview(); };
-['shop','addr','foot','free','qm','qn','qt','qp','qs'].forEach(id => $(id).addEventListener('input', preview));
+['shop','addr','foot','free','qn','qt','qp','qs'].forEach(id => $(id).addEventListener('input', preview));
 $('qs').addEventListener('change', preview);
+$('qon').addEventListener('change', preview);
 $('bc').onclick = connect;
 $('bd').onclick = disconnect;
 $('pr').onclick = () => {
-  if(tabN === 3){
-    if(!$('qp').value.trim()){ alert('Payload QRIS kosong'); return; }
-    doPrint(toQrisBytes());
+  if(tabN === 1){
+    if(qrisOn() && !$('qp').value.trim()){ alert('Payload QRIS kosong'); return; }
+    doPrint(toStrukBytes());
   } else {
-    doPrint(build());
+    doPrint(buildFree());
   }
 };
 $('tst').onclick = () => doPrint([ctr('TES RPP02N'), '-'.repeat(W), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ012345', '0123456789 abcdefghijklmnopqrstuv', '-'.repeat(W), ctr('Printer OK')]);
@@ -326,15 +333,12 @@ function tab(n){
   tabN = n;
   $('p1').classList.toggle('hid', n !== 1);
   $('p2').classList.toggle('hid', n !== 2);
-  $('p3').classList.toggle('hid', n !== 3);
   $('t1').className = n === 1 ? '' : 's';
   $('t2').className = n === 2 ? '' : 's';
-  $('t3').className = n === 3 ? '' : 's';
   preview();
 }
 $('t1').onclick = () => tab(1);
 $('t2').onclick = () => tab(2);
-$('t3').onclick = () => tab(3);
 preview();
 </script>
 </body>
