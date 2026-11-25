@@ -21,6 +21,10 @@ button.s{background:transparent;color:var(--tx);border:1px solid var(--bd)}
 button:disabled{opacity:.45;cursor:not-allowed}
 .r{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .item{display:grid;grid-template-columns:1fr 60px 100px 36px;gap:6px;margin-bottom:6px}
+.menu{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:8px 0 12px}
+.menu button{padding:10px 8px;font-size:13px;font-weight:600;background:var(--bg);color:var(--tx);border:1px solid var(--bd);text-align:left;line-height:1.25}
+.menu button small{display:block;font-weight:500;color:var(--mut);font-size:11px;margin-top:2px}
+.menu button:active{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 12%,var(--bg))}
 #st{font-size:13px;font-weight:600}
 .ok{color:var(--ok)}.er{color:var(--er)}
 .tabs{display:flex;gap:6px;margin-bottom:12px}
@@ -28,16 +32,15 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .hid{display:none}
 .check{display:flex;align-items:center;gap:8px;margin:12px 0 4px;font-size:13px;color:var(--tx)}
 .check input{width:auto;accent-color:var(--ac)}
-#qbox{margin-top:4px;padding-top:4px;border-top:1px dashed var(--bd)}
-#qprev{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;background:var(--bg);border-radius:8px;margin-top:8px}
-#qprev canvas{max-width:160px;width:100%;image-rendering:pixelated;background:#fff;padding:6px;border-radius:6px}
+#qbox{margin-top:4px;padding-top:8px;border-top:1px dashed var(--bd)}
+#qprev{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;background:var(--bg);border-radius:8px}
+#qprev img,#pvq img{width:160px;height:160px;object-fit:contain;background:#fff;padding:6px;border-radius:6px;image-rendering:pixelated}
 .meta{font-size:11px;color:var(--mut);text-align:center;line-height:1.35}
-.meta strong{color:var(--tx);display:block;font-size:12px}
 .hint{font-size:11px;color:var(--mut);margin-top:6px}
 #pvwrap{display:flex;flex-direction:column;align-items:stretch;gap:8px}
 #pvq{display:none;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border-top:1px dashed var(--bd)}
 #pvq.on{display:flex}
-#pvq canvas{width:140px;background:#fff;padding:4px;border-radius:4px}
+#pvq img{width:140px;height:140px}
 </style>
 </head>
 <body>
@@ -59,36 +62,28 @@ button:disabled{opacity:.45;cursor:not-allowed}
     </div>
 
     <div id="p1">
-      <label>Nama Toko</label><input id="shop" value="PADUKA BY TABUSI - BEVERAGES">
-      <label>Alamat / Keterangan</label><input id="addr" value="Bekasi">
-      <h2 style="margin-top:14px">Barang</h2>
+      <label>Nama Toko</label><input id="shop" value="Paduka by Tabusi">
+      <label>Alamat / Keterangan</label><input id="addr" value="Bogor">
+      <h2 style="margin-top:14px">Menu Jus</h2>
+      <div class="menu" id="menu"></div>
+      <h2>Pesanan</h2>
       <div id="items"></div>
-      <button class="s" id="add">+ Tambah barang</button>
+      <button class="s" id="add">+ Barang lain</button>
       <label>Catatan kaki</label><input id="foot" value="Terima kasih!">
 
       <label class="check"><input type="checkbox" id="qon" checked> Cetak QRIS di bawah struk</label>
       <div id="qbox">
-        <label>NMID</label>
-        <input id="qn" value="ID1026604786164">
-        <label>Kode Terminal</label>
-        <input id="qt" value="A01">
-        <label>Payload QRIS (EMV)</label>
-        <textarea id="qp" rows="3">00020101021126600003001011516000102110266047861640303A0151440014ID.CO.QRIS.WWW0215ID10266047861640303A01520458125303360540105802ID5924PADUKA BY TABUSI - BEVERA6006BEKASI61051741162070703A0163045610</textarea>
-        <label>Ukuran QR di printer</label>
+        <label>Lebar QR di printer (dot)</label>
         <select id="qs">
-          <option value="4">4 — kecil</option>
-          <option value="5">5</option>
-          <option value="6" selected>6 — sedang</option>
-          <option value="7">7</option>
-          <option value="8">8 — besar</option>
+          <option value="240">240 — kecil</option>
+          <option value="280" selected>280 — sedang</option>
+          <option value="320">320 — besar</option>
+          <option value="360">360 — penuh 58mm</option>
         </select>
-        <p class="hint">QRIS muncul di bawah total/catatan kaki saat cetak struk.</p>
+        <p class="hint">Sumber: <code>assets/qr.png</code> (tanpa generate ulang).</p>
         <div id="qprev">
-          <canvas id="qcan" width="160" height="160"></canvas>
-          <div class="meta">
-            <strong id="qlabel">PADUKA BY TABUSI - BEVERAGES</strong>
-            <span id="qmeta">NMID ID1026604786164 · A01</span>
-          </div>
+          <img id="qimg" src="assets/qr.png" alt="QRIS">
+          <div class="meta">assets/qr.png</div>
         </div>
       </div>
     </div>
@@ -107,21 +102,21 @@ Baris 3</textarea>
   </div>
 
   <div class="c">
-    <h2 id="pvh">Pratinjau (32 karakter/baris)</h2>
+    <h2>Pratinjau (32 karakter/baris)</h2>
     <div id="pvwrap">
       <pre id="pv" style="margin:0;font-size:12px;overflow-x:auto"></pre>
       <div id="pvq">
-        <canvas id="pvcan" width="140" height="140"></canvas>
-        <span class="meta" style="font-size:11px">Scan QRIS untuk bayar</span>
+        <img src="assets/qr.png" alt="QRIS">
+        <span class="meta">Scan QRIS untuk bayar</span>
       </div>
     </div>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 <script>
 const W = 32;
-let dev = null, chr = null, tabN = 1;
+const QR_SRC = 'assets/qr.png';
+let dev = null, chr = null, tabN = 1, qrImg = null;
 const $ = id => document.getElementById(id);
 
 const SERVICES = [
@@ -190,10 +185,8 @@ function buildQrisFooter(){
   return [
     '-'.repeat(W),
     ctr('Bayar dengan QRIS'),
-    ctr($('qn').value),
-    '', // placeholder QR
-    ctr('SATU QRIS UNTUK SEMUA'),
-    ctr('www.aspi-qris.id')
+    '', // placeholder gambar QR
+    ctr('SATU QRIS UNTUK SEMUA')
   ];
 }
 
@@ -202,49 +195,59 @@ function preview(){
   if(tabN === 1){
     const lines = buildStruk();
     if(qrisOn()){
-      lines.push(...buildQrisFooter().map(l => l === '' ? '[ QRIS ]' : l));
+      lines.push(...buildQrisFooter().map(l => l === '' ? '[ assets/qr.png ]' : l));
       $('pvq').classList.add('on');
-      drawQr($('pvcan'), 140);
     } else {
       $('pvq').classList.remove('on');
     }
     $('pv').textContent = lines.join('\n');
-    $('qlabel').textContent = $('shop').value || '(tanpa nama)';
-    $('qmeta').textContent = 'NMID ' + ($('qn').value || '-') + ' · ' + ($('qt').value || '-');
-    drawQr($('qcan'), 160);
   } else {
     $('pvq').classList.remove('on');
     $('pv').textContent = buildFree().join('\n');
   }
 }
 
-function drawQr(canvas, size){
-  const payload = $('qp').value.trim();
-  if(!canvas) return;
-  if(!payload){
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
-    return;
-  }
-  if(typeof QRCode === 'undefined') return;
-  QRCode.toCanvas(canvas, payload, {
-    width: size,
-    margin: 1,
-    errorCorrectionLevel: 'M',
-    color: { dark: '#000000', light: '#ffffff' }
-  }, err => { if(err) console.error(err); });
+/** Muat assets/qr.png sekali */
+function loadQrImage(){
+  return new Promise((resolve, reject) => {
+    if(qrImg && qrImg.complete){ resolve(qrImg); return; }
+    const img = new Image();
+    img.onload = () => { qrImg = img; resolve(img); };
+    img.onerror = () => reject(new Error('Gagal muat ' + QR_SRC));
+    img.src = QR_SRC;
+  });
 }
 
-function escposQr(data, moduleSize){
-  const d = new TextEncoder().encode(data);
-  const size = Math.max(1, Math.min(16, moduleSize|0 || 6));
+/** Raster ESC/POS GS v 0 dari gambar mono */
+function imageToEscPos(img, targetW){
+  const w = Math.max(8, Math.min(384, targetW|0 || 280));
+  const h = Math.round(w * (img.height / img.width));
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(img, 0, 0, w, h);
+  const { data } = ctx.getImageData(0, 0, w, h);
+  const bytesPerRow = Math.ceil(w / 8);
+  const body = new Uint8Array(bytesPerRow * h);
+  for(let y = 0; y < h; y++){
+    for(let x = 0; x < w; x++){
+      const i = (y * w + x) * 4;
+      const lum = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+      if(lum < 128) body[y * bytesPerRow + (x >> 3)] |= 0x80 >> (x & 7);
+    }
+  }
   const out = [];
-  out.push(0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00);
-  out.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, size);
-  out.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31);
-  const storeLen = d.length + 3;
-  out.push(0x1D, 0x28, 0x6B, storeLen & 0xff, (storeLen >> 8) & 0xff, 0x31, 0x50, 0x30, ...d);
-  out.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30);
+  // center
+  out.push(0x1B, 0x61, 0x01);
+  // GS v 0 m=0
+  out.push(0x1D, 0x76, 0x30, 0x00,
+    bytesPerRow & 0xff, (bytesPerRow >> 8) & 0xff,
+    h & 0xff, (h >> 8) & 0xff,
+    ...body);
+  out.push(0x0A);
+  out.push(0x1B, 0x61, 0x00);
   return out;
 }
 
@@ -256,7 +259,7 @@ function toBytes(lines){
   return new Uint8Array(out);
 }
 
-function toStrukBytes(){
+async function toStrukBytes(){
   const enc = new TextEncoder();
   const out = [0x1B, 0x40];
   const pushLine = l => { out.push(...enc.encode(l), 0x0A); };
@@ -264,18 +267,17 @@ function toStrukBytes(){
   buildStruk().forEach(pushLine);
 
   if(qrisOn()){
-    const payload = $('qp').value.trim();
-    const size = +$('qs').value || 6;
-    out.push(0x1B, 0x61, 0x01); // center
+    const img = await loadQrImage();
+    const size = +$('qs').value || 280;
+    out.push(0x1B, 0x61, 0x01);
     for(const l of buildQrisFooter()){
       if(l === ''){
-        if(payload) out.push(...escposQr(payload, size));
-        out.push(0x0A);
+        out.push(...imageToEscPos(img, size));
       } else {
         pushLine(l);
       }
     }
-    out.push(0x1B, 0x61, 0x00); // left
+    out.push(0x1B, 0x61, 0x00);
   }
 
   out.push(0x1B, 0x64, 4);
@@ -296,7 +298,9 @@ async function send(bytes){
 async function doPrint(bytesOrLines){
   try{
     setSt('Mencetak…', true);
-    const bytes = bytesOrLines instanceof Uint8Array ? bytesOrLines : toBytes(bytesOrLines);
+    const bytes = bytesOrLines instanceof Uint8Array ? bytesOrLines
+      : bytesOrLines instanceof Promise ? await bytesOrLines
+      : toBytes(bytesOrLines);
     await send(bytes);
     setSt('Terhubung: ' + (dev.name||'printer'), true);
   }catch(e){
@@ -304,25 +308,65 @@ async function doPrint(bytesOrLines){
   }
 }
 
+const MENU = [
+  { name: 'Jus Mangga', price: 12000 },
+  { name: 'Jus Pisang', price: 10000 },
+  { name: 'Jus Alpukat', price: 12000 },
+  { name: 'Jus Naga', price: 12000 },
+  { name: 'Jus Sirsak', price: 10000 },
+  { name: 'Jus Jambu', price: 10000 },
+  { name: 'Jus Melon', price: 10000 }
+];
+
 function addItem(n='', q=1, p=0){
   const d = document.createElement('div'); d.className = 'item';
   d.innerHTML = '<input placeholder="Nama" value="'+n+'"><input type="number" min="1" value="'+q+'"><input type="number" min="0" placeholder="Harga" value="'+(p||'')+'"><button class="s" type="button">✕</button>';
   d.querySelector('button').onclick = () => { d.remove(); preview(); };
   d.addEventListener('input', preview);
   $('items').appendChild(d);
+  preview();
 }
-addItem('Kopi susu', 2, 18000); addItem('Roti bakar', 1, 15000);
 
-$('add').onclick = () => { addItem(); preview(); };
-['shop','addr','foot','free','qn','qt','qp','qs'].forEach(id => $(id).addEventListener('input', preview));
+/** Tambah dari menu; kalau item sama sudah ada, qty +1 */
+function addFromMenu(name, price){
+  for(const r of document.querySelectorAll('.item')){
+    const [n, q, p] = r.querySelectorAll('input');
+    if(n.value === name && +p.value === price){
+      q.value = (+q.value || 0) + 1;
+      preview();
+      return;
+    }
+  }
+  addItem(name, 1, price);
+}
+
+function renderMenu(){
+  const box = $('menu');
+  box.innerHTML = '';
+  MENU.forEach(m => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = m.name + '<small>Rp ' + m.price.toLocaleString('id-ID') + '</small>';
+    b.onclick = () => addFromMenu(m.name, m.price);
+    box.appendChild(b);
+  });
+}
+renderMenu();
+
+$('add').onclick = () => { addItem(); };
+['shop','addr','foot','free'].forEach(id => $(id).addEventListener('input', preview));
 $('qs').addEventListener('change', preview);
 $('qon').addEventListener('change', preview);
 $('bc').onclick = connect;
 $('bd').onclick = disconnect;
-$('pr').onclick = () => {
+$('pr').onclick = async () => {
   if(tabN === 1){
-    if(qrisOn() && !$('qp').value.trim()){ alert('Payload QRIS kosong'); return; }
-    doPrint(toStrukBytes());
+    try{
+      if(qrisOn()) await loadQrImage();
+      doPrint(await toStrukBytes());
+    }catch(e){
+      alert(e.message || 'Gagal siapkan QRIS');
+    }
   } else {
     doPrint(buildFree());
   }
@@ -339,6 +383,7 @@ function tab(n){
 }
 $('t1').onclick = () => tab(1);
 $('t2').onclick = () => tab(2);
+loadQrImage().catch(() => {});
 preview();
 </script>
 </body>
