@@ -27,8 +27,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .menu button:active{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 12%,var(--bg))}
 #st{font-size:13px;font-weight:600}
 .ok{color:var(--ok)}.er{color:var(--er)}
-.tabs{display:flex;gap:6px;margin-bottom:12px}
-.tabs button{flex:1;font-size:13px;padding:9px 8px}
+.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.tabs button{flex:1;min-width:90px;font-size:13px;padding:9px 8px}
 .hid{display:none}
 .check{display:flex;align-items:center;gap:8px;margin:12px 0 4px;font-size:13px;color:var(--tx)}
 .check input{width:auto;accent-color:var(--ac)}
@@ -41,6 +41,15 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #pvq{display:none;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border-top:1px dashed var(--bd)}
 #pvq.on{display:flex}
 #pvq img{width:140px;height:140px}
+.drop{border:2px dashed var(--bd);border-radius:10px;padding:18px;text-align:center;background:var(--bg);cursor:pointer}
+.drop.drag{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 10%,var(--bg))}
+.drop input{display:none}
+.drop strong{display:block;color:var(--tx);margin-bottom:4px}
+#fprev{display:none;margin-top:10px;padding:10px;background:var(--bg);border-radius:8px;text-align:center}
+#fprev.on{display:block}
+#fprev canvas{max-width:100%;height:auto;image-rendering:pixelated;background:#fff;border-radius:4px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+input[type=range]{padding:0;accent-color:var(--ac)}
 </style>
 </head>
 <body>
@@ -59,6 +68,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
     <div class="tabs">
       <button id="t1">Struk</button>
       <button id="t2" class="s">Teks Bebas</button>
+      <button id="t3" class="s">File</button>
     </div>
 
     <div id="p1">
@@ -95,6 +105,55 @@ Baris 2
 Baris 3</textarea>
     </div>
 
+    <div id="p3" class="hid">
+      <label class="drop" id="drop">
+        <strong>Pilih / jatuhkan file</strong>
+        <span class="meta">Gambar, PDF, atau .txt — diproses di browser, tidak dikirim ke server</span>
+        <input type="file" id="file" accept="image/*,application/pdf,.pdf,.txt,text/plain">
+      </label>
+      <div id="fmeta" class="hint"></div>
+
+      <div id="fimgopts" class="hid">
+        <div id="fpagewrap" class="hid">
+          <label>Halaman PDF</label>
+          <select id="fpage"></select>
+        </div>
+        <div class="row2">
+          <div>
+            <label>Orientasi</label>
+            <select id="forient">
+              <option value="portrait" selected>Portrait</option>
+              <option value="landscape">Landscape</option>
+            </select>
+          </div>
+          <div>
+            <label>Putar landscape</label>
+            <select id="frot">
+              <option value="90" selected>90° kanan</option>
+              <option value="-90">90° kiri</option>
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div>
+            <label>Lebar cetak: <span id="fwv">280</span> dot</label>
+            <input type="range" id="fw" min="80" max="384" step="8" value="280">
+          </div>
+          <div>
+            <label>Ambang hitam: <span id="fthv">128</span></label>
+            <input type="range" id="fth" min="40" max="220" step="1" value="128">
+          </div>
+        </div>
+        <label class="check"><input type="checkbox" id="fdith" checked> Dither (lebih bagus untuk foto)</label>
+        <p class="hint">Kertas 58mm ≈ 384 dot. Landscape = putar 90° lalu sesuaikan lebar.</p>
+      </div>
+
+      <div id="fprev">
+        <canvas id="fcan"></canvas>
+        <div class="meta" id="fsize"></div>
+      </div>
+    </div>
+
     <div class="r" style="margin-top:14px">
       <button id="pr" disabled>Cetak</button>
       <button id="tst" class="s" disabled>Tes Cetak</button>
@@ -102,7 +161,7 @@ Baris 3</textarea>
   </div>
 
   <div class="c">
-    <h2>Pratinjau (32 karakter/baris)</h2>
+    <h2>Pratinjau</h2>
     <div id="pvwrap">
       <pre id="pv" style="margin:0;font-size:12px;overflow-x:auto"></pre>
       <div id="pvq">
@@ -113,10 +172,16 @@ Baris 3</textarea>
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
 const W = 32;
 const QR_SRC = 'assets/qr.png';
 let dev = null, chr = null, tabN = 1, qrImg = null;
+let upImg = null, upText = null, upName = '', upUrl = null;
+/** @type {HTMLCanvasElement[]} halaman PDF yang sudah di-render */
+let upPages = [];
 const $ = id => document.getElementById(id);
 
 const SERVICES = [
@@ -185,13 +250,16 @@ function buildQrisFooter(){
   return [
     '-'.repeat(W),
     ctr('Bayar dengan QRIS'),
-    '', // placeholder gambar QR
+    '',
     ctr('SATU QRIS UNTUK SEMUA')
   ];
 }
 
 function preview(){
   $('qbox').style.display = $('qon').checked ? '' : 'none';
+  $('fwv').textContent = $('fw').value;
+  $('fthv').textContent = $('fth').value;
+
   if(tabN === 1){
     const lines = buildStruk();
     if(qrisOn()){
@@ -201,13 +269,27 @@ function preview(){
       $('pvq').classList.remove('on');
     }
     $('pv').textContent = lines.join('\n');
-  } else {
+  } else if(tabN === 2){
     $('pvq').classList.remove('on');
     $('pv').textContent = buildFree().join('\n');
+  } else {
+    $('pvq').classList.remove('on');
+    if(upPages.length || upImg){
+      const { w, h } = renderUploadPreview();
+      const pageNote = upPages.length
+        ? (' · PDF ' + ($('fpage').value === 'all' ? 'semua ' + upPages.length + ' hlm' : 'hlm ' + $('fpage').value))
+        : '';
+      $('pv').textContent = upName + '\n' + w + ' x ' + h + ' dot' + pageNote + '\n(lokal, tanpa server)';
+    } else if(upText != null){
+      $('pv').textContent = buildUploadText().join('\n');
+      $('fprev').classList.remove('on');
+    } else {
+      $('pv').textContent = '(belum ada file)';
+      $('fprev').classList.remove('on');
+    }
   }
 }
 
-/** Muat assets/qr.png sekali */
 function loadQrImage(){
   return new Promise((resolve, reject) => {
     if(qrImg && qrImg.complete){ resolve(qrImg); return; }
@@ -218,30 +300,100 @@ function loadQrImage(){
   });
 }
 
-/** Raster ESC/POS GS v 0 dari gambar mono */
-function imageToEscPos(img, targetW){
+/** Putar sumber untuk landscape (kertas tetap sempit; konten diputar 90°) */
+function orientSource(img, orient, rotDeg){
+  if(orient !== 'landscape') return img;
+  const deg = rotDeg === -90 ? -90 : 90;
+  const sw = img.width || img.videoWidth || 0;
+  const sh = img.height || img.videoHeight || 0;
+  const canvas = document.createElement('canvas');
+  canvas.width = sh;
+  canvas.height = sw;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate(deg * Math.PI / 180);
+  ctx.drawImage(img, -sw / 2, -sh / 2);
+  return canvas;
+}
+
+function uploadOrientOpts(){
+  return {
+    orient: $('forient').value || 'portrait',
+    rot: +$('frot').value || 90
+  };
+}
+
+/** Raster mono + opsional Floyd–Steinberg dither */
+function rasterize(img, targetW, threshold, dither, orient, rotDeg){
+  img = orientSource(img, orient || 'portrait', rotDeg);
   const w = Math.max(8, Math.min(384, targetW|0 || 280));
-  const h = Math.round(w * (img.height / img.width));
+  const h = Math.max(1, Math.round(w * (img.height / img.width)));
   const canvas = document.createElement('canvas');
   canvas.width = w; canvas.height = h;
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, w, h);
   ctx.drawImage(img, 0, 0, w, h);
-  const { data } = ctx.getImageData(0, 0, w, h);
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const { data } = imgData;
+  const gray = new Float32Array(w * h);
+  for(let i = 0, p = 0; i < data.length; i += 4, p++){
+    const a = data[i+3] / 255;
+    const g = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+    gray[p] = g * a + 255 * (1 - a);
+  }
+  const th = threshold == null ? 128 : threshold;
   const bytesPerRow = Math.ceil(w / 8);
   const body = new Uint8Array(bytesPerRow * h);
-  for(let y = 0; y < h; y++){
-    for(let x = 0; x < w; x++){
-      const i = (y * w + x) * 4;
-      const lum = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-      if(lum < 128) body[y * bytesPerRow + (x >> 3)] |= 0x80 >> (x & 7);
+
+  if(dither){
+    for(let y = 0; y < h; y++){
+      for(let x = 0; x < w; x++){
+        const i = y * w + x;
+        const old = gray[i];
+        const neu = old < th ? 0 : 255;
+        const err = old - neu;
+        if(neu === 0) body[y * bytesPerRow + (x >> 3)] |= 0x80 >> (x & 7);
+        if(x + 1 < w) gray[i + 1] += err * 7 / 16;
+        if(y + 1 < h){
+          if(x > 0) gray[i + w - 1] += err * 3 / 16;
+          gray[i + w] += err * 5 / 16;
+          if(x + 1 < w) gray[i + w + 1] += err * 1 / 16;
+        }
+      }
+    }
+  } else {
+    for(let y = 0; y < h; y++){
+      for(let x = 0; x < w; x++){
+        if(gray[y * w + x] < th) body[y * bytesPerRow + (x >> 3)] |= 0x80 >> (x & 7);
+      }
     }
   }
+  return { w, h, bytesPerRow, body, canvas, gray };
+}
+
+function paintMonoPreview(canvas, w, h, body, bytesPerRow){
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(w, h);
+  for(let y = 0; y < h; y++){
+    for(let x = 0; x < w; x++){
+      const bit = body[y * bytesPerRow + (x >> 3)] & (0x80 >> (x & 7));
+      const v = bit ? 0 : 255;
+      const i = (y * w + x) * 4;
+      img.data[i] = img.data[i+1] = img.data[i+2] = v;
+      img.data[i+3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function imageToEscPos(img, targetW, threshold, dither, orient, rotDeg){
+  const { w, h, bytesPerRow, body } = rasterize(img, targetW, threshold, dither, orient, rotDeg);
   const out = [];
-  // center
   out.push(0x1B, 0x61, 0x01);
-  // GS v 0 m=0
   out.push(0x1D, 0x76, 0x30, 0x00,
     bytesPerRow & 0xff, (bytesPerRow >> 8) & 0xff,
     h & 0xff, (h >> 8) & 0xff,
@@ -249,6 +401,153 @@ function imageToEscPos(img, targetW){
   out.push(0x0A);
   out.push(0x1B, 0x61, 0x00);
   return out;
+}
+
+function currentUploadImages(){
+  if(upPages.length){
+    const v = $('fpage').value;
+    if(v === 'all') return upPages;
+    const i = Math.max(0, (+v || 1) - 1);
+    return upPages[i] ? [upPages[i]] : [];
+  }
+  return upImg ? [upImg] : [];
+}
+
+function renderUploadPreview(){
+  const imgs = currentUploadImages();
+  if(!imgs.length) return { w: 0, h: 0 };
+  const tw = +$('fw').value || 280;
+  const th = +$('fth').value || 128;
+  const dither = $('fdith').checked;
+  const { orient, rot } = uploadOrientOpts();
+  $('frot').disabled = orient !== 'landscape';
+  // pratinjau: halaman terpilih, atau halaman 1 jika "semua"
+  const src = imgs[0];
+  const { w, h, bytesPerRow, body } = rasterize(src, tw, th, dither, orient, rot);
+  paintMonoPreview($('fcan'), w, h, body, bytesPerRow);
+  $('fprev').classList.add('on');
+  const parts = [];
+  if(upPages.length > 1) parts.push($('fpage').value === 'all' ? upPages.length + ' hlm' : 'hlm ' + $('fpage').value);
+  parts.push(orient === 'landscape' ? 'landscape' : 'portrait');
+  $('fsize').textContent = w + ' × ' + h + ' dot · ' + parts.join(' · ');
+  return { w, h };
+}
+
+function buildUploadText(){
+  const lines = [];
+  clean(upText || '').split('\n').forEach(l => {
+    while(l.length > W){ lines.push(l.slice(0, W)); l = l.slice(W); }
+    lines.push(l);
+  });
+  return lines;
+}
+
+function clearUpload(){
+  if(upUrl){ URL.revokeObjectURL(upUrl); upUrl = null; }
+  upImg = null; upText = null; upName = ''; upPages = [];
+  $('fmeta').textContent = '';
+  $('fimgopts').classList.add('hid');
+  $('fpagewrap').classList.add('hid');
+  $('fprev').classList.remove('on');
+  $('fpage').innerHTML = '';
+}
+
+function fillPageSelect(n){
+  const sel = $('fpage');
+  sel.innerHTML = '';
+  if(n <= 1){
+    $('fpagewrap').classList.add('hid');
+    return;
+  }
+  const optAll = document.createElement('option');
+  optAll.value = 'all';
+  optAll.textContent = 'Semua (' + n + ' halaman)';
+  sel.appendChild(optAll);
+  for(let i = 1; i <= n; i++){
+    const o = document.createElement('option');
+    o.value = String(i);
+    o.textContent = 'Halaman ' + i;
+    sel.appendChild(o);
+  }
+  $('fpagewrap').classList.remove('hid');
+}
+
+/** Render PDF → canvas per halaman (lokal, PDF.js) */
+async function loadPdfFile(file){
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const pages = [];
+  // scale tinggi supaya teks tajam saat diperkecil ke 58mm
+  const scale = 2;
+  for(let i = 1; i <= pdf.numPages; i++){
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    pages.push(canvas);
+  }
+  return pages;
+}
+
+async function handleFile(file){
+  if(!file) return;
+  clearUpload();
+  upName = file.name;
+  const isText = /^text\//.test(file.type) || /\.txt$/i.test(file.name);
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+  $('fmeta').textContent = file.name + ' · ' + Math.round(file.size / 1024) + ' KB · lokal di perangkat';
+
+  if(isText){
+    const reader = new FileReader();
+    reader.onload = () => { upText = String(reader.result || ''); preview(); };
+    reader.readAsText(file);
+    return;
+  }
+
+  if(isPdf){
+    try{
+      $('fmeta').textContent = file.name + ' · memuat PDF…';
+      upPages = await loadPdfFile(file);
+      if(!upPages.length) throw new Error('PDF kosong');
+      upImg = upPages[0];
+      fillPageSelect(upPages.length);
+      $('fimgopts').classList.remove('hid');
+      // PDF teks biasanya lebih bagus tanpa dither
+      $('fdith').checked = false;
+      $('fmeta').textContent = file.name + ' · ' + upPages.length + ' hlm · ' + Math.round(file.size / 1024) + ' KB · lokal';
+      preview();
+    }catch(e){
+      console.error(e);
+      alert('Gagal baca PDF: ' + (e.message || e));
+      clearUpload();
+      preview();
+    }
+    return;
+  }
+
+  if(!file.type.startsWith('image/')){
+    alert('Format tidak didukung. Pakai gambar, PDF, atau .txt');
+    clearUpload();
+    preview();
+    return;
+  }
+
+  upUrl = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    upImg = img;
+    $('fimgopts').classList.remove('hid');
+    $('fdith').checked = true;
+    preview();
+  };
+  img.onerror = () => {
+    alert('Gagal baca gambar');
+    clearUpload();
+    preview();
+  };
+  img.src = upUrl;
 }
 
 function toBytes(lines){
@@ -271,17 +570,33 @@ async function toStrukBytes(){
     const size = +$('qs').value || 280;
     out.push(0x1B, 0x61, 0x01);
     for(const l of buildQrisFooter()){
-      if(l === ''){
-        out.push(...imageToEscPos(img, size));
-      } else {
-        pushLine(l);
-      }
+      if(l === '') out.push(...imageToEscPos(img, size, 128, false));
+      else pushLine(l);
     }
     out.push(0x1B, 0x61, 0x00);
   }
 
   out.push(0x1B, 0x64, 4);
   return new Uint8Array(out);
+}
+
+function toUploadBytes(){
+  const imgs = currentUploadImages();
+  if(imgs.length){
+    const out = [0x1B, 0x40];
+    const tw = +$('fw').value || 280;
+    const th = +$('fth').value || 128;
+    const dither = $('fdith').checked;
+    const { orient, rot } = uploadOrientOpts();
+    imgs.forEach((img, i) => {
+      out.push(...imageToEscPos(img, tw, th, dither, orient, rot));
+      if(i < imgs.length - 1) out.push(0x1B, 0x64, 2); // jeda antar halaman
+    });
+    out.push(0x1B, 0x64, 4);
+    return new Uint8Array(out);
+  }
+  if(upText != null) return toBytes(buildUploadText());
+  throw new Error('Belum ada file');
 }
 
 async function send(bytes){
@@ -327,7 +642,6 @@ function addItem(n='', q=1, p=0){
   preview();
 }
 
-/** Tambah dari menu; kalau item sama sudah ada, qty +1 */
 function addFromMenu(name, price){
   for(const r of document.querySelectorAll('.item')){
     const [n, q, p] = r.querySelectorAll('input');
@@ -357,18 +671,37 @@ $('add').onclick = () => { addItem(); };
 ['shop','addr','foot','free'].forEach(id => $(id).addEventListener('input', preview));
 $('qs').addEventListener('change', preview);
 $('qon').addEventListener('change', preview);
+['fw','fth'].forEach(id => $(id).addEventListener('input', preview));
+$('fdith').addEventListener('change', preview);
+$('fpage').addEventListener('change', preview);
+$('forient').addEventListener('change', preview);
+$('frot').addEventListener('change', preview);
+
+const drop = $('drop');
+$('file').addEventListener('change', e => handleFile(e.target.files[0]));
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+drop.addEventListener('drop', e => {
+  e.preventDefault();
+  drop.classList.remove('drag');
+  handleFile(e.dataTransfer.files[0]);
+});
+
+
 $('bc').onclick = connect;
 $('bd').onclick = disconnect;
 $('pr').onclick = async () => {
-  if(tabN === 1){
-    try{
+  try{
+    if(tabN === 1){
       if(qrisOn()) await loadQrImage();
       doPrint(await toStrukBytes());
-    }catch(e){
-      alert(e.message || 'Gagal siapkan QRIS');
+    } else if(tabN === 2){
+      doPrint(buildFree());
+    } else {
+      doPrint(toUploadBytes());
     }
-  } else {
-    doPrint(buildFree());
+  }catch(e){
+    alert(e.message || 'Gagal cetak');
   }
 };
 $('tst').onclick = () => doPrint([ctr('TES RPP02N'), '-'.repeat(W), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ012345', '0123456789 abcdefghijklmnopqrstuv', '-'.repeat(W), ctr('Printer OK')]);
@@ -377,12 +710,15 @@ function tab(n){
   tabN = n;
   $('p1').classList.toggle('hid', n !== 1);
   $('p2').classList.toggle('hid', n !== 2);
+  $('p3').classList.toggle('hid', n !== 3);
   $('t1').className = n === 1 ? '' : 's';
   $('t2').className = n === 2 ? '' : 's';
+  $('t3').className = n === 3 ? '' : 's';
   preview();
 }
 $('t1').onclick = () => tab(1);
 $('t2').onclick = () => tab(2);
+$('t3').onclick = () => tab(3);
 loadQrImage().catch(() => {});
 preview();
 </script>
